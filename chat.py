@@ -2,29 +2,39 @@ import chainlit as cl
 
 from ctransformers import AutoModelForCausalLM
 
-llm = AutoModelForCausalLM.from_pretrained(
-    "zoltanctoth/orca_mini_3B-GGUF", model_file="orca-mini-3b.q4_0.gguf"
-)
-
-system = "You are an AI assistant that follows instruction extremely well. Help as much as you can. Give short answers."
-instruction = (
-    "What is the name of the capital city of India, answer with two word only? "
-)
+llm = None
 
 
-def get_prompt(instruction: str, history: list[str] | None = None) -> str:
+def get_llama_prompt(instruction: str, history: list[str] | None = None) -> str:
     global llm
     system = "You are an AI assistant that gives helpful answers. You answer the question in a short and concise way."
 
-    if llm.model_type == "llama":
-        prompt = f"<s>[INST] <<SYS>>\n{system}\n<</SYS>>\n\n{instruction} [/INST]"
-    else:
-        prompt = f"### System:\n{system}\n\n### User:\n"
+    prompt = f"<s>[INST] <<SYS>>\n{system}\n<</SYS>>\n\n"
 
     if history:
         prompt += f"This is the conversation history: {''.join(history)}. Now answer the question: "
+
+    prompt += f"{instruction} [/INST]</s>"
+    return prompt
+
+
+def get_orca_prompt(instruction: str, history: list[str] | None = None) -> str:
+    global llm
+    system = "You are an AI assistant that gives helpful answers. You answer the question in a short and concise way."
+    prompt = f"### System:\n{system}\n\n### User:\n"
+
+    if history:
+        prompt += f"This is the conversation history: {''.join(history)}. Now answer the question: "
+
     prompt += f"{instruction}\n\n### Response:\n"
     return prompt
+
+
+def get_prompt(instruction: str, history: list[str] | None = None) -> str:
+    if "Llama" in llm.model_path:
+        return get_llama_prompt(instruction, history)
+
+    return get_orca_prompt(instruction, history)
 
 
 @cl.on_message
